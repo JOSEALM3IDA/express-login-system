@@ -22,20 +22,19 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.get('/login', (req: Request, res: Response) => {
-    let username: any = req.query.username;
-    if (typeof username !== 'string' && !(username instanceof String)) {
+    const { username, password }: { username: string, password: string } = req.body;
+    
+    if (!username) {
         console.error("Error: username not a string!");
         res.sendStatus(400);
+        exit(-1);
     }
 
-    let password: any = req.query.password;
-    if (typeof password !== 'string' && !(password instanceof String)) {
+    if (!password) {
         console.error("Error: password not a string!");
         res.sendStatus(400);
+        exit(-1);
     }
-
-    password = password as string;
-    password = password as string;
 
     bcrypt.hash(password, SALT_ROUNDS, (error: Error | undefined, hash: String) => {
         if (error) {
@@ -63,27 +62,25 @@ app.get('/login', (req: Request, res: Response) => {
 });
 
 app.post('/register', (req: Request, res: Response) => {
-    let username: any = req.query.username;
-    if (typeof username !== 'string' && !(username instanceof String)) {
+    const { username, email, password }: {username: string, email: string, password: string} = req.body;
+
+    if (!username) {
         console.error("Error: username not a string!");
         res.sendStatus(400);
+        exit(-1);
     }
 
-    let email: any = req.query.email;
-    if (typeof email !== 'string' && !(email instanceof String)) {
+    if (!email) {
         console.error("Error: email not a string!");
         res.sendStatus(400);
+        exit(-1);
     }
 
-    let password: any = req.query.password;
-    if (typeof password !== 'string' && !(password instanceof String)) {
+    if (!password) {
         console.error("Error: password not a string!");
         res.sendStatus(400);
+        exit(-1);
     }
-
-    password = password as string;
-    email = email as string;
-    password = password as string;
 
     bcrypt.hash(password, SALT_ROUNDS, (error: Error | undefined, hash: String) => {
         if (error) {
