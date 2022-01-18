@@ -24,19 +24,24 @@ app.get('/', (req: Request, res: Response) => {
 app.get('/login', (req: Request, res: Response) => {
     let username: any = req.query.username;
     if (typeof username !== 'string' && !(username instanceof String)) {
+        console.error("Error: username not a string!");
         res.sendStatus(400);
     }
 
     let password: any = req.query.password;
     if (typeof password !== 'string' && !(password instanceof String)) {
+        console.error("Error: password not a string!");
         res.sendStatus(400);
     }
 
     password = password as string;
     password = password as string;
 
-    bcrypt.hash(password, SALT_ROUNDS, (error: any, hash: String) => {
-        if (error) res.sendStatus(400);
+    bcrypt.hash(password, SALT_ROUNDS, (error: Error | undefined, hash: String) => {
+        if (error) {
+            console.error("Error hashing password: " + error.message);
+            res.sendStatus(400);
+        }
 
         console.log("Username: " + username)
         console.log("Password hash: " + hash);
@@ -45,6 +50,7 @@ app.get('/login', (req: Request, res: Response) => {
             [username, hash],
             (err: Error, result: any) => {
                 if (err) {
+                    console.error("Error selecting from database:" + err.message);
                     res.json({ success: 1, error: err.message });
                     exit(1);
                 }
@@ -59,16 +65,19 @@ app.get('/login', (req: Request, res: Response) => {
 app.post('/register', (req: Request, res: Response) => {
     let username: any = req.query.username;
     if (typeof username !== 'string' && !(username instanceof String)) {
+        console.error("Error: username not a string!");
         res.sendStatus(400);
     }
 
     let email: any = req.query.email;
     if (typeof email !== 'string' && !(email instanceof String)) {
+        console.error("Error: email not a string!");
         res.sendStatus(400);
     }
 
     let password: any = req.query.password;
     if (typeof password !== 'string' && !(password instanceof String)) {
+        console.error("Error: password not a string!");
         res.sendStatus(400);
     }
 
@@ -76,8 +85,11 @@ app.post('/register', (req: Request, res: Response) => {
     email = email as string;
     password = password as string;
 
-    bcrypt.hash(password, SALT_ROUNDS, (error: any, hash: String) => {
-        if (error) res.sendStatus(400);
+    bcrypt.hash(password, SALT_ROUNDS, (error: Error | undefined, hash: String) => {
+        if (error) {
+            console.error("Error hashing password: " + error.message);
+            res.sendStatus(400);
+        }
         
         console.log("Username: " + username)
         console.log("Email: " + email)
@@ -87,6 +99,7 @@ app.post('/register', (req: Request, res: Response) => {
             [username, email, hash],
             (err: Error, result: any) => {
                 if (err) {
+                    console.error("Error inserting into database: " + err.message);
                     res.json({ success: 1, error: err.message });
                     exit(1);
                 }
