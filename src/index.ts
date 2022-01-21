@@ -4,9 +4,10 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import "reflect-metadata";
-import { exit } from 'process';
-import { User } from './entity/user';
+import { User } from './entity/User';
+import { ConfirmationToken } from './entity/ConfirmationToken';
 import { createConnection } from "typeorm";
+import { randomBytes } from 'crypto';
 
 const SALT_ROUNDS = 10;
 
@@ -65,7 +66,7 @@ app.post('/login', async (req: Request, res: Response) => {
     }
 });
 
-app.post('/register', (req: Request, res: Response) => {
+app.post('/register', async (req: Request, res: Response) => {
     const { username, email, password }: {username: string, email: string, password: string} = req.body;
 
     if (!username) {
@@ -94,16 +95,67 @@ app.post('/register', (req: Request, res: Response) => {
         }
 
         try {
+            const existingUser = await User.findOne({ username })
+            if (existingUser) {
+                console.log(`${username}: can't register because username already exists`);
+                res.json({ status: 409, error: "Username already exists" })
+                return;
+            }
+
             const user = User.create({ username, email, password: hash });
             await user.save();
             console.log("Created User: " + user.username)
-            res.sendStatus(201);
+
+            const token = randomBytes(32).toString("hex");
+            const expiration = new Date(new Date().getTime() + 15*60000); // Add 15 minutes to current time
+
+            const confirmationToken = ConfirmationToken.create({ token, username, expiration });
+            await confirmationToken.save();
+            console.log(`Created token ${confirmationToken.token} for email ${confirmationToken.user.email} with expiration date ${expiration}`);
+ 
+            res.json({ status: 201, token: token }) // Token should NOT be sent back to the user this way. This is just a proof of concept!
         } catch(err: any) {
             console.log("Error inserting into database: " + err.message);
             res.json({ status: 500, error: "Something went wrong" })
             return;
         }
     });
+});
+
+app.post("/confirm", async (req: Request, res: Response) => {
+    const { token: tokenQ } = req.query;
+
+    if (!tokenQ) {
+        console.log("Error: token not a string!");
+        res.json({ status: 500, error: "Something went wrong" })
+        return;
+    }
+
+    const token = tokenQ as string;
+
+    const existingToken = await ConfirmationToken.findOne(
+        { token: token },
+        { relations: ["user"] }
+    );
+
+    if (!existingToken) {
+        console.log(`Token doesn't exist: ${token}`);
+        res.json({ status: 404, error: "Non existent token" });
+        return;
+    }
+
+    if (existingToken.expiration < new Date()) {
+        console.log(`Token for confirmation of email ${existingToken.user.email} of user ${existingToken.user.username} has expired at the time of the request`);
+        existingToken.remove();
+        res.json({ status: 410, error: "Token has expired" });
+        return;
+    }
+
+    existingToken.user.confirmed = true;
+    existingToken.user.save();
+    existingToken.remove();
+    console.log(`Confirmed email ${existingToken.user.email} of user ${existingToken.user.username} with token ${existingToken.token}`);
+    res.sendStatus(200);
 });
 
 createConnection({
@@ -115,7 +167,7 @@ createConnection({
     "database": process.env.DB_NAME || "database",
     "synchronize": false,
     "logging": false,
-    "entities": [User]
+    "entities": [User, ConfirmationToken]
 }).then(async (connection) => {
     app.listen(PORT, () => console.log(`Running on ${PORT} ⚡`));
 }).catch(error => console.log("Couldn't connect to database! " + error));
