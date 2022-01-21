@@ -53,7 +53,12 @@ app.post('/login', async (req: Request, res: Response) => {
 
         if (!(await bcrypt.compare(password, user.password))) {
             console.log("Failed login from user " + username);
-            res.json({ status: 500, error: "Wrong username or password" });
+            res.json({ status: 403, error: "Wrong username or password" });
+            return;
+        }
+
+        if (!user.confirmed) {
+            res.json({ status: 403, error: "Email awaiting confirmation" });
             return;
         }
 
