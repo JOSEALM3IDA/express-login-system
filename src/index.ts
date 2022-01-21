@@ -111,7 +111,7 @@ app.post('/register', async (req: Request, res: Response) => {
 
             const confirmationToken = ConfirmationToken.create({ token, username, expiration });
             await confirmationToken.save();
-            console.log(`Created token ${confirmationToken.token} for email ${confirmationToken.user.email} with expiration date ${expiration}`);
+            console.log(`Created token ${confirmationToken.token} for email ${user.email} with expiration date ${expiration}`);
  
             res.json({ status: 201, token: token }) // Token should NOT be sent back to the user this way. This is just a proof of concept!
         } catch(err: any) {
